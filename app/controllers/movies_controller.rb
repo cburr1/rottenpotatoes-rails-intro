@@ -11,8 +11,14 @@ class MoviesController < ApplicationController
   end
 
   def index
-    @movies = Movie.all
     sort = params[:sort] || session[:sort] #Holds what is sent by the click. (Will use session later to hold cookies)
+    
+    @all_ratings = Movie.select("DISTINCT rating").map(&:rating).sort
+    @checked_ratings = params[:ratings] || session[:ratings] || {}
+    
+    if @checked_ratings == {}
+      @checked_ratings = @all_ratings
+    end
     
     if params[:sort] == "title" then
       @title_header = "hilite"
@@ -25,14 +31,17 @@ class MoviesController < ApplicationController
       @release_date_header = ""
     end
     
-    if params[:sort] != session[:sort] #Will use session here later
+    if params[:sort] != session[:sort] || params[:ratings] != session[:ratings] #Will use session here later
       session[:sort] = sort
-      redirect_to :sort => sort and return #Will add ratings later
-    else
-      @movies = Movie.all
+      session[:ratings] = @checked_ratings
+      redirect_to :sort => sort, :ratings => @checked_ratings and return #Will add ratings later
     end
     
-    @movies = Movie.order(params[:sort]) #Where statement will be added later
+    if @checked_ratings.respond_to?('keys')
+        @checked_ratings = @checked_ratings.keys
+    end
+    
+    @movies = Movie.order(params[:sort]).where(rating: @checked_ratings) #Where statement will be added later
   
   end
 
